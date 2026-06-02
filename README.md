@@ -47,20 +47,17 @@ This project ships with a **GitHub Pages** workflow (`.github/workflows/deploy-p
 
 ### 1. Create the repository
 
-On [GitHub](https://github.com/new), create a new repository (for example `myntra-digital-wardrobe`). Do **not** add a README if you are pushing this folder for the first time.
+Remote for this project: [github.com/dasmeshverma1-wq/Wardrobe](https://github.com/dasmeshverma1-wq/Wardrobe)
 
 ### 2. Push this project
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit: Myntra Digital Wardrobe prototype"
-git branch -M main
-git remote add origin https://github.com/<YOUR_USER>/myntra-digital-wardrobe.git
+cd /Users/dasmesh.verma1/Wardrobe
+git remote add origin https://github.com/dasmeshverma1-wq/Wardrobe.git   # skip if already added
 git push -u origin main
 ```
 
-If the repo name is not `myntra-digital-wardrobe`, set `GITHUB_REPOSITORY_NAME` in the workflow build step to match, or rename the repo so the Vite `base` path matches `/<repo-name>/`.
+If GitHub asks you to sign in, use a [Personal Access Token](https://github.com/settings/tokens) as the password (HTTPS), or set up [SSH keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 
 ### 3. Enable GitHub Pages
 
@@ -68,12 +65,12 @@ In the repo on GitHub: **Settings → Pages → Build and deployment → Source:
 
 After the first workflow run succeeds, the app is live at:
 
-`https://<YOUR_USER>.github.io/myntra-digital-wardrobe/`
+`https://dasmeshverma1-wq.github.io/Wardrobe/`
 
 ### Local preview (Pages base path)
 
 ```bash
-GITHUB_PAGES=true GITHUB_REPOSITORY_NAME=myntra-digital-wardrobe npm run build
+GITHUB_PAGES=true GITHUB_REPOSITORY_NAME=Wardrobe npm run build
 npx vite preview
 ```
 
