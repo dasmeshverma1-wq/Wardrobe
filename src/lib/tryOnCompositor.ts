@@ -189,31 +189,6 @@ export async function generateTryOn(
   onProgress?: (p: TryOnProgress) => void,
   options?: GenerateTryOnOptions,
 ): Promise<string> {
-  // Check if we are trying on the new Summer Linen Set garments
-  const hasLinenBlend = garments.some(g => g.name === 'Green Linen Shirt' || g.imageUrl.includes('linen_blend_top'));
-  const hasKhakiCasual = garments.some(g => g.name === 'White Casual Trousers' || g.imageUrl.includes('khaki_trousers_bottom'));
-
-  if (hasLinenBlend && hasKhakiCasual) {
-    const steps = [
-      'Analyzing your photo…',
-      'Mapping body shape…',
-      'Draping garments…',
-      'Adjusting fit & lighting…',
-      'Final render…',
-    ];
-    onProgress?.({ step: 0, total: 5, label: steps[0] });
-    await delay(600);
-    onProgress?.({ step: 1, total: 5, label: steps[1] });
-    await delay(600);
-    onProgress?.({ step: 2, total: 5, label: 'Draping Green Linen Shirt…' });
-    await delay(800);
-    onProgress?.({ step: 3, total: 5, label: 'Adjusting fit & lighting…' });
-    await delay(800);
-    onProgress?.({ step: 4, total: 5, label: steps[4] });
-    await delay(400);
-    return '/seed-products/female_model_tryon.png';
-  }
-
   // We race the AI try-on generation against a 15-second timeout.
   // If the AI takes longer than 15 seconds, we fall back to the local canvas compositor.
   try {
