@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CloseIcon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
 
@@ -30,6 +30,12 @@ export function Sheet({
   contentClassName,
   hideHandle = false,
 }: Props) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startYRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -41,22 +47,102 @@ export function Sheet({
 
   if (!open) return null;
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    startYRef.current = touch.clientY;
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!sheetRef.current) return;
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - startYRef.current;
+
+    if (deltaY <= 0) {
+      if (isDragging) {
+        setDragOffset(0);
+        setIsDragging(false);
+      }
+      return;
+    }
+
+    // Check if we are touching a scrollable element that is currently scrolled down
+    let target = e.target as HTMLElement | null;
+    let isScrolled = false;
+    while (target && target !== sheetRef.current) {
+      if (target.scrollHeight > target.clientHeight) {
+        const style = window.getComputedStyle(target);
+        if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && target.scrollTop > 0) {
+          isScrolled = true;
+          break;
+        }
+      }
+      target = target.parentElement;
+    }
+
+    if (isScrolled) {
+      return;
+    }
+
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    setIsDragging(true);
+    isDraggingRef.current = true;
+    setDragOffset(deltaY);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+
+    const sheetHeight = sheetRef.current?.clientHeight || 300;
+    const dismissThreshold = Math.min(120, sheetHeight * 0.25);
+
+    if (dragOffset > dismissThreshold) {
+      onClose();
+    }
+
+    setIsDragging(false);
+    isDraggingRef.current = false;
+    setDragOffset(0);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal>
-      <div className="absolute inset-0 bg-ink/30 animate-fade-in" onClick={onClose} />
       <div
+        className="absolute inset-0 bg-ink/30 transition-opacity duration-150"
+        style={{
+          opacity: isDragging && sheetRef.current
+            ? Math.max(0, 1 - dragOffset / sheetRef.current.clientHeight)
+            : undefined,
+          animation: isDragging ? 'none' : 'fade-in 0.2s ease-out',
+        }}
+        onClick={onClose}
+      />
+      <div
+        ref={sheetRef}
         className={cn(
-          'relative flex w-full max-w-[440px] flex-col rounded-t-4xl bg-bg shadow-sheet animate-sheet-in',
+          'relative flex w-full max-w-[440px] flex-col rounded-t-4xl bg-bg shadow-sheet',
+          isDragging ? '' : 'animate-sheet-in',
         )}
         style={{
           maxHeight,
           height,
-          transition: height
-            ? 'height 0.28s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1)'
-            : undefined,
+          transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined,
+          transition: isDragging
+            ? 'none'
+            : 'transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), height 0.28s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {!hideHandle && <div className="mx-auto mt-2 h-[3px] w-9 shrink-0 rounded-full bg-ink-ghost" />}
+        {!hideHandle && (
+          <div className="flex w-full shrink-0 justify-center py-2.5 cursor-grab active:cursor-grabbing">
+            <div className="h-[4px] w-10 rounded-full bg-ink-ghost/70" />
+          </div>
+        )}
         {(title || showCloseButton) && (
           <header className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-2">
             {title ? (
