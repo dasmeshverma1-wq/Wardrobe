@@ -6,7 +6,7 @@ import path from 'node:path';
 /** Subpath when hosted on GitHub Pages (`/<repo-name>/`). */
 const pagesBase =
   process.env.GITHUB_PAGES === 'true'
-    ? `/${process.env.GITHUB_REPOSITORY_NAME || 'myntra-digital-wardrobe'}/`
+    ? `/${process.env.GITHUB_REPOSITORY_NAME || 'Wardrobe'}/`
     : '/';
 
 export default defineConfig({
