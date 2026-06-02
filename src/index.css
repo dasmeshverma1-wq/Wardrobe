@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    /* `dvh` tracks the *visible* viewport (excluding the mobile URL bar /
+       system chrome), so the layout never extends behind it. Older browsers
+       gracefully fall back to 100%. */
+    height: 100dvh;
+  }
+
+  /* Lock the document so only the in-shell scroll containers move; this stops
+     iOS rubber-banding from hiding the bottom nav when the user pulls. */
+  html,
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* Respect the user's reduced-motion preference. Functional motion (drag,
+     swipe, springback) stays so gestures still feel committed; only
+     decorative/looping animations are disabled. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    @apply select-none;
+  }
+
+  ::selection {
+    /* Fabric Watermelon/600 at 18% alpha */
+    background: rgba(255, 63, 108, 0.18);
+  }
+
+  /* Hide scrollbar where we want carousel-style overflow */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .mobile-shell {
+    @apply mx-auto flex max-w-[440px] flex-col overflow-hidden bg-bg;
+    height: 100%;
+    height: 100dvh;
+    box-shadow: 0 0 0 1px #d4d5d8;
+  }
+
+  .scroll-area {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .hairline {
+    @apply border border-border;
+  }
+
+  .surface {
+    @apply rounded-2xl border border-border-subtle bg-bg;
+  }
+
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-widish text-ink-subtle;
+  }
+
+  .search-field {
+    @apply rounded-full border border-border bg-bg px-4 text-[13px] shadow-search;
+  }
+
+  /* Layout — consistent page gutters and surfaces */
+  .page-x {
+    @apply px-5;
+  }
+
+  .page-inset {
+    @apply px-5 py-4;
+  }
+
+  .card {
+    @apply rounded-2xl border border-border-subtle bg-bg p-4;
+  }
+
+  .card-sm {
+    @apply rounded-xl border border-border-subtle bg-bg p-3;
+  }
+
+  .studio-frame {
+    @apply rounded-frame border border-border-subtle bg-bg;
+  }
+
+  .input-field {
+    @apply h-11 rounded-xl border border-border bg-bg px-4 text-[13px] tracking-tightish placeholder:text-ink-ghost focus:border-ink-strong focus:outline-none focus:ring-1 focus:ring-ink/10;
+  }
+
+  /* Discover surface — clean near-white base with very soft Watermelon and
+     Lilac glows. Keeps a subtle branded gradient without the heavy
+     "magazine paper" look. */
+  .surface-discover {
+    background-color: #ffffff;
+    background-image:
+      radial-gradient(at 8% 0%, rgba(255, 63, 108, 0.1) 0, transparent 45%),
+      radial-gradient(at 95% 100%, rgba(110, 93, 198, 0.12) 0, transparent 48%);
+  }
+
+  /* Signature Discover gradient — Watermelon → Lilac. Used on the hero
+     "Save" sticker and any moment that needs the punchy Myntra accent. */
+  .bg-discover-gradient {
+    background-image: linear-gradient(135deg, #ff3f6c 0%, #b25bd6 55%, #6e5dc6 100%);
+  }
+
+  .surface-paper {
+    background-color: #f0e8d2;
+    /* SVG noise — small repeating PNG-equivalent rendered as data URI keeps
+       the surface alive at any scale without external assets. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-blend-mode: multiply;
+  }
+
+  /* Chunky display heading — Discover hero typography. We hard-code the
+     font stack here instead of @applying `font-display` because that utility
+     name collides with the CSS `font-display` descriptor and trips the
+     Tailwind/PostCSS @apply parser. */
+  .editorial-display {
+    font-family: 'Fraunces', Georgia, 'Times New Roman', ui-serif, serif;
+    font-weight: 900;
+    font-style: normal;
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 96, 'SOFT' 50;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+
+  /* Collage canvas — larger resize hit areas for touch */
+  .collage-resize-handle {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 9999px;
+    background: rgba(38, 42, 57, 0.35) !important;
+    border: 2px solid #fff !important;
+  }
+
+  /* Micro-interactions: Bag Pop Wiggle */
+  @keyframes bag-pop {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12) rotate(-6deg); }
+  }
+  .animate-bag-pop {
+    animation: bag-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}
