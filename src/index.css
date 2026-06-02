@@ -76,6 +76,15 @@
     @apply flex-1 overflow-y-auto;
   }
 
+  /* Horizontal rails inside vertically scrollable pages (outfit pieces, try-on items) */
+  .touch-scroll-x {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+
   .text-balance {
     text-wrap: balance;
   }

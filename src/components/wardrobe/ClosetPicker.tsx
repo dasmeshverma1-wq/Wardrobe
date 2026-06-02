@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CategoryFilterRow } from '@/components/wardrobe/CategoryFilterRow';
 import { ItemCard } from '@/components/wardrobe/ItemCard';
-import { SelectionBar } from '@/components/ui/SelectionBar';
+import { SelectionBar, SELECTION_BAR_SCROLL_PAD } from '@/components/ui/SelectionBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import {
@@ -21,6 +21,7 @@ import { useWardrobeStore } from '@/store/wardrobeStore';
 import { useChrome } from '@/store/chromeStore';
 import type { Category } from '@/types';
 import { bucketForColor } from '@/lib/color';
+import { sortWardrobeByCategory } from '@/lib/categoryOrder';
 import { cn } from '@/lib/cn';
 
 type Props = {
@@ -41,9 +42,10 @@ export function ClosetPicker({
   continueLabel = 'Continue',
   onAddItems,
   emptyTitle = 'Nothing in your closet yet',
-  emptyBody = 'Import from Myntra or add photos to start building looks.',
+  emptyBody = 'Import from your Myntra purchases, wishlist, or cart to start building looks.',
 }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
   const items = useWardrobeStore((s) => s.items);
   const activeCategory = useWardrobeStore((s) => s.activeCategory);
   const setCategory = useWardrobeStore((s) => s.setCategory);
@@ -67,11 +69,12 @@ export function ClosetPicker({
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((it) => {
+    const filtered = items.filter((it) => {
       if (activeCategory !== 'all' && it.category !== activeCategory) return false;
       if (filters.color !== 'all' && bucketForColor(it.dominantColor) !== filters.color) return false;
-      if (filters.source === 'myntra' && it.source !== 'myntra') return false;
-      if (filters.source === 'added' && it.source === 'myntra') return false;
+      if (filters.source === 'past' && !(it.source === 'myntra-past' || it.source === 'myntra' || it.source === 'seed')) return false;
+      if (filters.source === 'wishlist' && it.source !== 'myntra-wishlist') return false;
+      if (filters.source === 'cart' && it.source !== 'myntra-cart') return false;
       if (!q) return true;
       return (
         it.name?.toLowerCase().includes(q) ||
@@ -79,6 +82,7 @@ export function ClosetPicker({
         it.category.includes(q)
       );
     });
+    return activeCategory === 'all' ? sortWardrobeByCategory(filtered) : filtered;
   }, [items, activeCategory, filters, query]);
 
   const categoryCounts = useMemo(() => {
@@ -111,14 +115,9 @@ export function ClosetPicker({
         body={emptyBody}
         action={
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button onClick={() => navigate('/wardrobe/add?tab=cart')} leadingIcon={<PlusIcon size={18} />}>
+            <Button onClick={() => navigate('/wardrobe/add')} leadingIcon={<PlusIcon size={18} />}>
               Import from Myntra
             </Button>
-            {onAddItems && (
-              <Button variant="secondary" onClick={onAddItems}>
-                Add a photo
-              </Button>
-            )}
           </div>
         }
       />
@@ -127,7 +126,7 @@ export function ClosetPicker({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div className={cn('flex min-h-0 flex-1 flex-col', showBar ? 'pb-48' : 'pb-6')}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', showBar ? SELECTION_BAR_SCROLL_PAD : 'pb-6')}>
         <div className="sticky top-0 z-10 bg-bg px-5 pb-2 pt-1 shadow-[0_1px_0_var(--color-divider)]">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -161,26 +160,29 @@ export function ClosetPicker({
             onSelect={setCategory}
             counts={categoryCounts}
             totalCount={items.length}
+            scrollResetKey={location.pathname}
           />
         </div>
 
-        <div className="px-5 pt-3">
-          {filteredItems.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-ink-subtle">No items match your filters.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {filteredItems.map((it) => (
-                <ItemCard
-                  key={it.id}
-                  item={it}
-                  selectable
-                  selected={selectedIds.has(it.id)}
-                  selectionIndex={selectionOrder.get(it.id)}
-                  onClick={() => toggleSelect(it.id)}
-                />
-              ))}
-            </div>
-          )}
+        <div className="scroll-area min-h-0 flex-1 overscroll-contain">
+          <div className="px-5 pt-3 pb-[calc(1rem+var(--safe-bottom))]">
+            {filteredItems.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-ink-subtle">No items match your filters.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {filteredItems.map((it) => (
+                  <ItemCard
+                    key={it.id}
+                    item={it}
+                    selectable
+                    selected={selectedIds.has(it.id)}
+                    selectionIndex={selectionOrder.get(it.id)}
+                    onClick={() => toggleSelect(it.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
 import { FAB } from '@/components/ui/FAB';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { SelectionBar } from '@/components/ui/SelectionBar';
+import { SelectionBar, SELECTION_BAR_SCROLL_PAD } from '@/components/ui/SelectionBar';
 import {
   PlusIcon,
   SparklesIcon,
@@ -46,6 +46,7 @@ import { track } from '@/lib/telemetry';
 import { navigateToTryOn, tryOnStateFromItems } from '@/lib/tryOnNavigation';
 import { useVisibleOutfits, useTryOnPersona } from '@/lib/tryOnPersona';
 import { bucketForColor } from '@/lib/color';
+import { sortWardrobeByCategory } from '@/lib/categoryOrder';
 import { cn } from '@/lib/cn';
 
 type Segment = 'closet' | 'outfits' | 'collections';
@@ -120,11 +121,12 @@ export function WardrobeHome() {
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((it) => {
+    const filtered = items.filter((it) => {
       if (activeCategory !== 'all' && it.category !== activeCategory) return false;
       if (filters.color !== 'all' && bucketForColor(it.dominantColor) !== filters.color) return false;
-      if (filters.source === 'myntra' && it.source !== 'myntra') return false;
-      if (filters.source === 'added' && it.source === 'myntra') return false;
+      if (filters.source === 'past' && !(it.source === 'myntra-past' || it.source === 'myntra' || it.source === 'seed')) return false;
+      if (filters.source === 'wishlist' && it.source !== 'myntra-wishlist') return false;
+      if (filters.source === 'cart' && it.source !== 'myntra-cart') return false;
       if (!q) return true;
       return (
         it.name?.toLowerCase().includes(q) ||
@@ -132,6 +134,7 @@ export function WardrobeHome() {
         it.category.includes(q)
       );
     });
+    return activeCategory === 'all' ? sortWardrobeByCategory(filtered) : filtered;
   }, [items, activeCategory, filters, query]);
 
   const categoryCounts = useMemo(() => {
@@ -568,10 +571,10 @@ export function ClosetGrid({
       <EmptyState
         icon={<HangerIcon size={24} />}
         title="Your closet is empty"
-        body="Add a few items — we'll cut out backgrounds and tag them automatically."
+        body="Import your items from Myntra past purchases, wishlist, or cart to start building looks."
         action={
           <Button onClick={onAdd} leadingIcon={<PlusIcon size={18} />}>
-            Add your first item
+            Import from Myntra
           </Button>
         }
       />
@@ -601,7 +604,7 @@ export function ClosetGrid({
     <div
       className={cn(
         'px-5 pt-3',
-        hasSelectionBar ? 'pb-48' : 'pb-[calc(5rem+var(--safe-bottom))]',
+        hasSelectionBar ? SELECTION_BAR_SCROLL_PAD : 'pb-[calc(5rem+var(--safe-bottom))]',
       )}
     >
       <div className="grid grid-cols-3 gap-2">

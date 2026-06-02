@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
 /** Subpath when hosted on GitHub Pages (`/<repo-name>/`). */
 var pagesBase = process.env.GITHUB_PAGES === 'true'
-    ? "/".concat(process.env.GITHUB_REPOSITORY_NAME || 'myntra-digital-wardrobe', "/")
+    ? "/".concat(process.env.GITHUB_REPOSITORY_NAME || 'Wardrobe', "/")
     : '/';
 export default defineConfig({
     base: pagesBase,

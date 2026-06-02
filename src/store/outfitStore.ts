@@ -7,7 +7,13 @@ type State = {
   outfits: Outfit[];
   hydrated: boolean;
   hydrate: () => void;
-  saveOutfit: (data: Omit<Outfit, 'id' | 'createdAt'> & { id?: string }) => Outfit;
+  saveOutfit: (
+    data: Omit<Outfit, 'id' | 'createdAt' | 'generationStatus'> & {
+      id?: string;
+      /** Pass `null` to clear try-on generating / failed overlay. */
+      generationStatus?: Outfit['generationStatus'] | null;
+    },
+  ) => Outfit;
   removeOutfit: (id: string) => void;
   renameOutfit: (id: string, name: string) => void;
   getOutfit: (id: string) => Outfit | undefined;
@@ -21,7 +27,14 @@ export const useOutfitStore = create<State>((set, get) => ({
 
   hydrate: () => {
     if (get().hydrated) return;
-    set({ outfits: lsLoad<Outfit[]>(SLICE, []), hydrated: true });
+    const outfits = lsLoad<Outfit[]>(SLICE, []).map((o) => {
+      if (o.generationStatus === 'generating') {
+        const { generationStatus: _, ...rest } = o;
+        return rest;
+      }
+      return o;
+    });
+    set({ outfits, hydrated: true });
   },
 
   saveOutfit: (data) => {
@@ -34,8 +47,14 @@ export const useOutfitStore = create<State>((set, get) => ({
       nodes: data.nodes,
       thumbnailDataUrl: data.thumbnailDataUrl,
       background: data.background,
-      generationStatus: data.generationStatus,
     };
+    if (data.generationStatus === null) {
+      /* cleared — omit so cards stop showing the generating overlay */
+    } else if (data.generationStatus !== undefined) {
+      outfit.generationStatus = data.generationStatus;
+    } else if (existing?.generationStatus) {
+      outfit.generationStatus = existing.generationStatus;
+    }
     set((s) => {
       const outfits = existing
         ? s.outfits.map((o) => (o.id === outfit.id ? outfit : o))

@@ -1,4 +1,9 @@
 import { useMemo } from 'react';
+import {
+  getHomeRailOutfit,
+  homeRailToOutfit,
+  isHomeRailOutfit,
+} from '@/data/homeCreatorRails';
 import { WIREFRAME_DEMO_OUTFITS, isWireframeDemoOutfit } from '@/data/wireframeDemoOutfits';
 import { TRYON_RETURNING_USER_BODY } from '@/data/tryOnSampleAvatar';
 import { useChrome } from '@/store/chromeStore';
@@ -61,10 +66,12 @@ export function resolveOutfitById(
   if (persona === 'has-photos') {
     return WIREFRAME_DEMO_OUTFITS.find((o) => o.id === id);
   }
+  const rail = getHomeRailOutfit(id);
+  if (rail) return homeRailToOutfit(rail);
   return undefined;
 }
 
-export { isWireframeDemoOutfit };
+export { isWireframeDemoOutfit, isHomeRailOutfit };
 
 export function useTryOnPersona() {
   const persona = useChrome((s) => s.tryOnWireframePersona);

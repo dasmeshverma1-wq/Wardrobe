@@ -10,11 +10,12 @@ import {
 } from '@/lib/color';
 import { useWardrobeStore } from '@/store/wardrobeStore';
 
-export type Source = 'all' | 'added' | 'myntra';
+export type Source = 'all' | 'past' | 'wishlist' | 'cart';
 const SOURCE_LABEL: Record<Source, string> = {
   all: 'All sources',
-  added: 'My uploads',
-  myntra: 'From Myntra',
+  past: 'Purchased',
+  wishlist: 'Wishlist',
+  cart: 'Cart',
 };
 
 export type FilterState = {
@@ -56,10 +57,15 @@ export function FilterSheet({
   }, [items]);
 
   const sourceCounts = useMemo(() => {
-    const counts = { added: 0, myntra: 0 } as Record<'added' | 'myntra', number>;
+    const counts = { past: 0, wishlist: 0, cart: 0 } as Record<'past' | 'wishlist' | 'cart', number>;
     for (const it of items) {
-      if (it.source === 'myntra') counts.myntra += 1;
-      else counts.added += 1;
+      if (it.source === 'myntra-past' || it.source === 'myntra' || it.source === 'seed') {
+        counts.past += 1;
+      } else if (it.source === 'myntra-wishlist') {
+        counts.wishlist += 1;
+      } else if (it.source === 'myntra-cart') {
+        counts.cart += 1;
+      }
     }
     return counts;
   }, [items]);
@@ -103,16 +109,22 @@ export function FilterSheet({
             label={SOURCE_LABEL.all}
           />
           <FilterPill
-            active={value.source === 'added'}
-            onClick={() => onChange({ ...value, source: 'added' })}
-            label={SOURCE_LABEL.added}
-            count={sourceCounts.added}
+            active={value.source === 'past'}
+            onClick={() => onChange({ ...value, source: 'past' })}
+            label={SOURCE_LABEL.past}
+            count={sourceCounts.past}
           />
           <FilterPill
-            active={value.source === 'myntra'}
-            onClick={() => onChange({ ...value, source: 'myntra' })}
-            label={SOURCE_LABEL.myntra}
-            count={sourceCounts.myntra}
+            active={value.source === 'wishlist'}
+            onClick={() => onChange({ ...value, source: 'wishlist' })}
+            label={SOURCE_LABEL.wishlist}
+            count={sourceCounts.wishlist}
+          />
+          <FilterPill
+            active={value.source === 'cart'}
+            onClick={() => onChange({ ...value, source: 'cart' })}
+            label={SOURCE_LABEL.cart}
+            count={sourceCounts.cart}
           />
         </div>
       </section>

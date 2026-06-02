@@ -16,7 +16,7 @@ import { useWardrobeStore } from '@/store/wardrobeStore';
 import { useOutfitStore } from '@/store/outfitStore';
 import { usePlannerStore } from '@/store/plannerStore';
 import { useChrome } from '@/store/chromeStore';
-import { TryOnScenarioSettings } from '@/components/settings/TryOnScenarioSettings';
+import { TryOnScenarioToggle } from '@/components/settings/TryOnScenarioSettings';
 import { cn } from '@/lib/cn';
 
 const PALETTE: Record<string, { label: string; swatches: string[] }> = {
@@ -78,13 +78,19 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title="Settings" maxHeight="80vh">
-        {/* Version Switcher */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        title="Settings"
+        maxHeight="85vh"
+        contentClassName="min-h-0 overflow-y-auto overscroll-contain pb-[calc(1rem+var(--safe-bottom))]"
+      >
+        {/* Wireframe / demo toggles — compact, same pattern as before */}
         <section className="mb-4 rounded-3xl border border-border-subtle bg-bg p-4">
-          <p className="section-label text-primary">Wireframe Version</p>
-          <div className="mt-2.5 flex items-center justify-between">
-            <span className="text-[14px] font-semibold text-ink-strong">Active Layout</span>
-            <div className="flex rounded-full bg-bg-soft p-0.5 border border-border-subtle">
+          <p className="section-label text-primary">Wireframe</p>
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            <span className="shrink-0 text-[14px] font-semibold text-ink-strong">Active layout</span>
+            <div className="flex min-w-0 max-w-[15rem] flex-1 justify-end rounded-full border border-border-subtle bg-bg-soft p-0.5">
               <button
                 type="button"
                 onClick={() => {
@@ -92,13 +98,13 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                   onClose();
                 }}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-bold transition-all',
+                  'min-w-0 flex-1 rounded-full px-2.5 py-1 text-[10px] font-bold transition-all',
                   wireframeVersion === 'v1'
                     ? 'bg-ink-strong text-white shadow-sm'
-                    : 'text-ink-subtle'
+                    : 'text-ink-subtle',
                 )}
               >
-                V1 (Multi-tab)
+                V1
               </button>
               <button
                 type="button"
@@ -107,19 +113,21 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                   onClose();
                 }}
                 className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-bold transition-all',
+                  'min-w-0 flex-1 rounded-full px-2.5 py-1 text-[10px] font-bold transition-all',
                   wireframeVersion === 'v2'
                     ? 'bg-ink-strong text-white shadow-sm'
-                    : 'text-ink-subtle'
+                    : 'text-ink-subtle',
                 )}
               >
-                V2 (Single Screen)
+                V2
               </button>
             </div>
           </div>
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-divider pt-3">
+            <span className="shrink-0 text-[14px] font-semibold text-ink-strong">Try-on scenario</span>
+            <TryOnScenarioToggle />
+          </div>
         </section>
-
-        <TryOnScenarioSettings />
 
         {/* Profile summary card */}
         <section className="rounded-3xl border border-border-subtle bg-bg p-4">

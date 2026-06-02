@@ -134,11 +134,11 @@ export function TryOnAvatarOnboardingSheet({
           <p className="m-0 shrink-0 text-[13px] leading-[1.45] text-[#686b77]">
             Capture two face selfies — front and side — to align your features.
           </p>
-          <div className="flex min-h-[220px] flex-1 items-center justify-center">
+          <div className="flex min-h-[170px] flex-1 items-center justify-center">
             <OnboardingReferenceStack
               variant="selfie"
               images={SELFIE_INTRO_STACK}
-              className="h-[248px] min-h-0 w-full"
+              className="h-[180px] min-h-0 w-full"
             />
           </div>
           <OnboardingIntroNotes notes={SELFIE_INTRO_NOTES} />

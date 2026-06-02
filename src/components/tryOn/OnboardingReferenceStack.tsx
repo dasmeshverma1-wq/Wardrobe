@@ -22,7 +22,7 @@ type OnboardingReferenceStackProps = {
 };
 
 const STACK_CARD_WIDTH: Record<'selfie' | 'body', number> = {
-  selfie: 176,
+  selfie: 130,
   body: 176,
 };
 
@@ -38,7 +38,11 @@ export function OnboardingReferenceStack({
 
   return (
     <div
-      className={cn('relative mx-auto h-full w-full max-w-[360px] min-h-[260px]', className)}
+      className={cn(
+        'relative mx-auto h-full w-full max-w-[360px]',
+        variant === 'selfie' ? 'min-h-[180px]' : 'min-h-[260px]',
+        className
+      )}
       aria-hidden
     >
       {images.map((img) => {
@@ -61,8 +65,8 @@ export function OnboardingReferenceStack({
                   src={img.src}
                   alt=""
                   className={cn(
-                    'aspect-[9/16] block w-full object-cover',
-                    variant === 'body' ? 'object-top' : 'object-center',
+                    'block w-full object-cover',
+                    variant === 'selfie' ? 'aspect-[3/4] object-center' : 'aspect-[9/16] object-top',
                   )}
                 />
                 <span className="absolute bottom-1.5 right-1.5 max-w-[85%] truncate rounded-md bg-black/55 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-[2px]">
@@ -162,18 +166,18 @@ export const SELFIE_INTRO_STACK: ReferenceStackImage[] = [
     label: 'Front-facing',
     rotate: '-4deg',
     zIndex: 1,
-    offsetX: -68,
+    offsetX: -48,
     offsetY: 4,
-    width: 176,
+    width: 130,
   },
   {
     src: '/seed-products/tryon-onboarding/selfie-side.jpg',
     label: 'Side profile',
     rotate: '5deg',
     zIndex: 2,
-    offsetX: 68,
+    offsetX: 48,
     offsetY: -6,
-    width: 176,
+    width: 130,
   },
 ];
 

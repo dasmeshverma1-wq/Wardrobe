@@ -1,4 +1,4 @@
-import type { TryOnGarment, TryOnProgress } from './tryOnTypes';
+import type { LookReferenceStyle, TryOnGarment, TryOnProgress } from './tryOnTypes';
 import { sortGarmentsByLayer } from './tryOnPlacement';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -184,6 +184,73 @@ export async function composeTryOnGemini(
       }
     } catch (err) {
       console.warn('[gemini try-on]', model, err);
+    }
+  }
+
+  return null;
+}
+
+function buildLookReferencePrompt(style: LookReferenceStyle, title?: string): string {
+  const styleHint =
+    style === 'flat-lay'
+      ? 'Image 2 is a FLAT-LAY outfit layout. Interpret every visible garment and accessory, then dress the person in image 1 in that complete look with natural fit and lighting.'
+      : 'Image 2 is an OUTFIT REFERENCE photo (often on a model). Copy only the clothing, colors, layers, and styling — NOT the model\'s face or body. Dress the person in image 1 in the same outfit.';
+
+  return [
+    'Create ONE photorealistic full-body virtual try-on image.',
+    '',
+    'Image 1 is the PERSON reference: keep their face, body shape, pose, skin tone, and a clean neutral studio-style background.',
+    styleHint,
+    title ? `Look name: "${title}".` : '',
+    '',
+    'Rules:',
+    '- Do not paste or composite the model from image 2 onto image 1',
+    '- Full body visible from head to toe when possible',
+    '- No text, logos, watermarks, or collages',
+    '- Output a single final try-on photo only',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Try-on from a curated look hero (model shot or flat lay) + user body photo.
+ */
+export async function composeTryOnFromLookReference(
+  bodyPhotoUrl: string,
+  lookImageUrl: string,
+  style: LookReferenceStyle,
+  onProgress?: (p: TryOnProgress) => void,
+  title?: string,
+): Promise<string | null> {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+  if (!apiKey?.trim()) return null;
+
+  onProgress?.({ step: 0, total: 5, label: 'Connecting to Gemini…' });
+
+  const personPart = await imageUrlToInlinePart(bodyPhotoUrl);
+  const lookPart = await imageUrlToInlinePart(lookImageUrl);
+  if (!personPart || !lookPart) return null;
+
+  const parts: Array<InlineImagePart | { text: string }> = [
+    { text: 'PERSON reference (image 1):' },
+    personPart,
+    { text: 'OUTFIT reference (image 2):' },
+    lookPart,
+    { text: buildLookReferencePrompt(style, title) },
+  ];
+
+  onProgress?.({ step: 2, total: 5, label: 'Styling look on you…' });
+
+  for (const model of IMAGE_MODELS) {
+    try {
+      const image = await generateWithModel(apiKey.trim(), model, parts);
+      if (image) {
+        onProgress?.({ step: 4, total: 5, label: 'Final render…' });
+        return image;
+      }
+    } catch (err) {
+      console.warn('[gemini look try-on]', model, err);
     }
   }
 

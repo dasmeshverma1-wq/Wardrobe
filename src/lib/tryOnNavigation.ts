@@ -2,6 +2,8 @@ import type { NavigateFunction } from 'react-router-dom';
 import type { CartLine } from '@/store/cartStore';
 import type { WishlistLine } from '@/store/wishlistStore';
 import type { Outfit, WardrobeItem } from '@/types';
+import { getHomeRailOutfit, isHomeRailOutfit } from '@/data/homeCreatorRails';
+import type { LookReferenceStyle } from '@/lib/tryOnTypes';
 import { getWireframeDemoPieceSpecs, isWireframeDemoOutfit } from '@/data/wireframeDemoOutfits';
 import { resolveOutfitItemIds } from '@/lib/outfitPieces';
 import { guessCategory } from '@/lib/categorize';
@@ -35,7 +37,33 @@ export function tryOnStateFromWishlist(
   return { title, garments: wishlist.slice(0, 6).map(lineToGarment) };
 }
 
+export function tryOnStateFromHomeRail(lookId: string): TryOnLocationState | null {
+  const def = getHomeRailOutfit(lookId);
+  if (!def?.thumbnailDataUrl) return null;
+
+  const lookReferenceStyle: LookReferenceStyle =
+    def.mode === 'dressing-room' ? 'flat-lay' : 'model';
+
+  return {
+    outfitId: def.id,
+    title: def.name ?? 'Look',
+    lookImageUrl: def.thumbnailDataUrl,
+    lookReferenceStyle,
+    garments: def.pieceSpecs.map((spec) => ({
+      id: spec.image,
+      name: spec.name,
+      category: spec.category,
+      imageUrl: spec.image,
+      zone: zoneForGarment({ category: spec.category, name: spec.name }),
+    })),
+  };
+}
+
 export function tryOnStateFromOutfit(outfit: Outfit, wardrobeItems: WardrobeItem[] = []): TryOnLocationState {
+  if (isHomeRailOutfit(outfit.id)) {
+    return tryOnStateFromHomeRail(outfit.id) ?? { outfitId: outfit.id, title: outfit.name };
+  }
+
   const itemIds = resolveOutfitItemIds(outfit, wardrobeItems);
   if (itemIds.length > 0) {
     return {
@@ -46,10 +74,11 @@ export function tryOnStateFromOutfit(outfit: Outfit, wardrobeItems: WardrobeItem
   }
 
   if (isWireframeDemoOutfit(outfit.id)) {
+    const specs = getWireframeDemoPieceSpecs(outfit.id);
     return {
       outfitId: outfit.id,
       title: outfit.name ?? 'Outfit',
-      garments: getWireframeDemoPieceSpecs(outfit.id).map((spec) => ({
+      garments: specs.map((spec) => ({
         id: spec.image,
         name: spec.name,
         category: spec.category,

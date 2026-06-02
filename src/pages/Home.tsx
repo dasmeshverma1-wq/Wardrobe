@@ -13,6 +13,12 @@ import {
   CompleteClosetCard,
   tryOnGarmentsFromPairing,
 } from '@/components/home/CompleteClosetCard';
+import { HomeOutfitRail, HOME_RAIL_CARD_WIDTH } from '@/components/home/HomeOutfitRail';
+import {
+  HOME_FLAT_LAY_OUTFITS,
+  HOME_TRY_ON_OUTFITS,
+  homeRailToOutfit,
+} from '@/data/homeCreatorRails';
 import { buildClosetPairings } from '@/lib/closetPairings';
 import {
   CalendarIcon,
@@ -48,6 +54,7 @@ import { SelectionBar } from '@/components/ui/SelectionBar';
 import { FAB } from '@/components/ui/FAB';
 import { toast } from '@/components/ui/Toast';
 import { bucketForColor } from '@/lib/color';
+import { sortWardrobeByCategory } from '@/lib/categoryOrder';
 import type { Category } from '@/types';
 
 export function Home() {
@@ -104,11 +111,12 @@ function HomeV2() {
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((it) => {
+    const filtered = items.filter((it) => {
       if (activeCategory !== 'all' && it.category !== activeCategory) return false;
       if (filters.color !== 'all' && bucketForColor(it.dominantColor) !== filters.color) return false;
-      if (filters.source === 'myntra' && it.source !== 'myntra') return false;
-      if (filters.source === 'added' && it.source === 'myntra') return false;
+      if (filters.source === 'past' && !(it.source === 'myntra-past' || it.source === 'myntra' || it.source === 'seed')) return false;
+      if (filters.source === 'wishlist' && it.source !== 'myntra-wishlist') return false;
+      if (filters.source === 'cart' && it.source !== 'myntra-cart') return false;
       if (!q) return true;
       return (
         it.name?.toLowerCase().includes(q) ||
@@ -116,6 +124,7 @@ function HomeV2() {
         it.category.includes(q)
       );
     });
+    return activeCategory === 'all' ? sortWardrobeByCategory(filtered) : filtered;
   }, [items, activeCategory, filters, query]);
 
   const categoryCounts = useMemo(() => {
@@ -162,7 +171,7 @@ function HomeV2() {
   const showSelectionBar = selectMode && activeTab === 'closet' && selectedIds.size > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-bg">
+    <div className="relative flex min-h-0 flex-1 flex-col bg-bg">
       {/* Top Header */}
       <header className="shrink-0 flex items-center justify-between px-5 pb-2.5 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-divider/40 bg-bg z-30">
         <div className="flex items-center gap-3">
@@ -173,7 +182,7 @@ function HomeV2() {
             }}
           />
           <h1 className="text-[22px] font-bold tracking-tightish text-ink-strong">
-            Wardrobe Closet
+            Wardrobe
           </h1>
         </div>
         <ProfileNavButton onClick={() => setSettingsOpen(true)} />
@@ -303,32 +312,7 @@ function HomeV2() {
               </button>
             )}
 
-            {/* Complete your closet — pairing carousel */}
-            <CompleteYourClosetWidget hasTryOnProfile={hasTryOnProfile} />
-
-            {/* Suggested For You Rail */}
-            <section>
-              <SectionHeader title="Suggested for you" />
-              <p className="mt-1 text-[13px] text-ink-subtle">
-                From your cart and wishlist
-              </p>
-              <div className="-mx-5 mt-3 overflow-x-auto no-scrollbar">
-                <div className="flex w-max gap-3 px-5 py-3">
-                  {suggestions.map((s) => (
-                    <SuggestionCard
-                      key={s.id}
-                      suggestion={s}
-                      onAction={() => {
-                        if (s.tryOn) navigateToTryOn(navigate, s.tryOn);
-                        else navigate(s.href);
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Outfits Section */}
+            {/* Your outfits */}
             <section>
               <SectionHeader
                 title="Your outfits"
@@ -366,14 +350,60 @@ function HomeV2() {
                   )}
                 </div>
               ) : (
-                <div className="-mx-5 mt-2.5 flex items-start gap-2 overflow-x-auto px-5 py-1 no-scrollbar">
+                <div className="touch-scroll-x -mx-5 mt-2 flex items-start gap-1.5 px-5 py-0.5 no-scrollbar">
                   {outfits.slice(0, 8).map((o) => (
-                    <div key={o.id} className="w-[9.5rem] shrink-0">
-                      <OutfitCard outfit={o} onClick={() => navigate(`/outfit/${o.id}`)} />
+                    <div key={o.id} className={cn(HOME_RAIL_CARD_WIDTH, 'shrink-0')}>
+                      <OutfitCard
+                        outfit={o}
+                        size="compact"
+                        imageAspect="square"
+                        imageFit="fill"
+                        imageFocus="top"
+                        onClick={() => navigate(`/outfit/${o.id}`)}
+                      />
                     </div>
                   ))}
                 </div>
               )}
+            </section>
+
+            <HomeOutfitRail
+              className="mt-6"
+              title="AI try-on looks"
+              subtitle="Model shots — try these on yourself"
+              badge="try-on"
+              outfits={HOME_TRY_ON_OUTFITS.map(homeRailToOutfit)}
+            />
+
+            <HomeOutfitRail
+              className="mt-6"
+              title="Outfits by creators"
+              subtitle="Flat-lay edits from Myntra creators — open to mix & match"
+              badge="flat-lay"
+              outfits={HOME_FLAT_LAY_OUTFITS.map(homeRailToOutfit)}
+            />
+
+            <CompleteYourClosetWidget hasTryOnProfile={hasTryOnProfile} />
+
+            <section>
+              <SectionHeader title="Suggested for you" />
+              <p className="mt-1 text-[13px] text-ink-subtle">
+                From your cart and wishlist
+              </p>
+              <div className="touch-scroll-x -mx-5 mt-3 px-5 py-3 no-scrollbar">
+                <div className="flex w-max gap-3">
+                  {suggestions.map((s) => (
+                    <SuggestionCard
+                      key={s.id}
+                      suggestion={s}
+                      onAction={() => {
+                        if (s.tryOn) navigateToTryOn(navigate, s.tryOn);
+                        else navigate(s.href);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             </section>
           </div>
         )}
@@ -635,30 +665,6 @@ function HomeV1() {
           </section>
         )}
 
-        {/* Recommendations rail */}
-        <section className="mt-7">
-          <div className="px-5">
-            <SectionHeader title="Suggested for you" />
-            <p className="mt-1 text-[13px] text-ink-subtle">
-              From your cart, wishlist, and calendar
-            </p>
-          </div>
-          <div className="mt-3 overflow-x-auto no-scrollbar">
-            <div className="flex w-max gap-3 px-5 py-3">
-              {suggestions.map((s) => (
-                <SuggestionCard
-                  key={s.id}
-                  suggestion={s}
-                  onAction={() => {
-                    if (s.tryOn) navigateToTryOn(navigate, s.tryOn);
-                    else navigate(s.href);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Your outfits */}
         <section className="mt-7 px-5">
           <SectionHeader
@@ -699,14 +705,67 @@ function HomeV1() {
               )}
             </div>
           ) : (
-            <div className="-mx-1 mt-2.5 flex items-start gap-2 overflow-x-auto px-1 py-1 no-scrollbar">
+            <div className="touch-scroll-x -mx-1 mt-2 flex items-start gap-1.5 px-1 py-0.5 no-scrollbar">
               {outfits.slice(0, 8).map((o) => (
-                <div key={o.id} className="w-[9.5rem] shrink-0">
-                   <OutfitCard outfit={o} onClick={() => navigate(`/outfit/${o.id}`)} />
+                <div key={o.id} className={cn(HOME_RAIL_CARD_WIDTH, 'shrink-0')}>
+                  <OutfitCard
+                    outfit={o}
+                    size="compact"
+                    imageAspect="square"
+                    imageFit="fill"
+                    imageFocus="top"
+                    onClick={() => navigate(`/outfit/${o.id}`)}
+                  />
                 </div>
               ))}
             </div>
           )}
+        </section>
+
+        <div className="mt-7 px-5">
+          <HomeOutfitRail
+            title="AI try-on looks"
+            subtitle="Model shots — try on yourself"
+            badge="try-on"
+            outfits={HOME_TRY_ON_OUTFITS.map(homeRailToOutfit)}
+          />
+        </div>
+
+        <div className="mt-7 px-5">
+          <HomeOutfitRail
+            title="Outfits by creators"
+            subtitle="Flat-lay edits — open to mix & match"
+            badge="flat-lay"
+            outfits={HOME_FLAT_LAY_OUTFITS.map(homeRailToOutfit)}
+          />
+        </div>
+
+        <section className="mt-7 px-5">
+          <CompleteYourClosetWidget hasTryOnProfile={hasTryOnProfile} />
+        </section>
+
+        {/* Suggested for you */}
+        <section className="mt-7">
+          <div className="px-5">
+            <SectionHeader title="Suggested for you" />
+            <p className="mt-1 text-[13px] text-ink-subtle">
+              From your cart, wishlist, and calendar
+            </p>
+          </div>
+          <div className="touch-scroll-x mt-3 px-5 py-3 no-scrollbar">
+            <div className="flex w-max gap-3">
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.id}
+                  suggestion={s}
+                  onAction={() => {
+                    if (s.tryOn) navigateToTryOn(navigate, s.tryOn);
+                    else navigate(s.href);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Closet teaser */}
@@ -790,7 +849,7 @@ function CompleteYourClosetWidget({ hasTryOnProfile }: { hasTryOnProfile: boolea
           </p>
         </div>
       ) : (
-        <div className="-mx-5 mt-3 flex gap-3 overflow-x-auto px-5 pb-1 no-scrollbar">
+        <div className="touch-scroll-x -mx-5 mt-3 flex gap-3 px-5 pb-1 no-scrollbar">
           {pairings.map((pairing) => (
             <CompleteClosetCard
               key={pairing.id}

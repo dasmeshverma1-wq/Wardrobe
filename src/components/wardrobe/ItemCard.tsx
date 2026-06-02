@@ -12,12 +12,22 @@ type Props = {
   onClick?: () => void;
 };
 
+const SOURCE_TAGS: Record<string, string> = {
+  'myntra-past': 'Purchased',
+  'myntra-wishlist': 'Wishlist',
+  'myntra-cart': 'Cart',
+  'myntra': 'Myntra',
+  'seed': 'Myntra',
+};
+
 /**
  * Myntra-style product tile with clear multi-select affordances.
  * In select mode: empty ring when idle, primary ring + corner check + order badge when picked.
  */
 export function ItemCard({ item, selectable, selected, selectionIndex, onClick }: Props) {
   const aria = describeItem(item, { selectable, selected, selectionIndex });
+  const tagText = SOURCE_TAGS[item.source];
+
   return (
     <button
       onClick={onClick}
@@ -64,14 +74,14 @@ export function ItemCard({ item, selectable, selected, selectionIndex, onClick }
         </span>
       )}
 
-      {item.source === 'myntra' && (
+      {tagText && (
         <span
           className={cn(
             'absolute rounded-full bg-ink/85 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widish text-white',
             selectable ? 'bottom-1.5 left-1.5' : 'left-2 top-2',
           )}
         >
-          Myntra
+          {tagText}
         </span>
       )}
     </button>

@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Sheet } from '@/components/ui/Sheet';
-import { CameraIcon, ImageIcon, LinkIcon, BagIcon, ChevronRightIcon } from '@/components/ui/Icon';
+import { BagIcon, HeartIcon, ChevronRightIcon } from '@/components/ui/Icon';
 
-type Method = 'camera' | 'gallery' | 'url' | 'past';
+type Method = 'past' | 'wishlist' | 'cart';
 
-const METHODS: { id: Method; label: string; sub: string; icon: typeof CameraIcon }[] = [
-  { id: 'camera', label: 'Camera', sub: 'Take a flat-lay photo', icon: CameraIcon },
-  { id: 'gallery', label: 'Gallery', sub: 'Upload from your phone', icon: ImageIcon },
-  { id: 'url', label: 'Paste a link', sub: 'Direct image URL', icon: LinkIcon },
+const METHODS: { id: Method; label: string; sub: string; icon: typeof BagIcon }[] = [
   { id: 'past', label: 'Past Myntra purchases', sub: '6 items ready to sync', icon: BagIcon },
+  { id: 'wishlist', label: 'Wishlist', sub: 'Import saved items', icon: HeartIcon },
+  { id: 'cart', label: 'Cart', sub: 'Import items in your bag', icon: BagIcon },
 ];
 
 export function AddItemSheet({ open, onClose }: { open: boolean; onClose: () => void }) {

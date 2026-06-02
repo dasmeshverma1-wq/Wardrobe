@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { CATEGORY_FILTER_IMAGES } from '@/data/categoryFilterImages';
 import { cn } from '@/lib/cn';
 import {
@@ -11,9 +12,16 @@ type Props = {
   onSelect: (category: Category | 'all') => void;
   counts: Partial<Record<Category, number>>;
   totalCount: number;
+  /** When this changes, the chip row scrolls back to All / Tops. */
+  scrollResetKey?: string | number;
 };
 
-export function CategoryFilterRow({ active, onSelect, counts, totalCount }: Props) {
+export function CategoryFilterRow({ active, onSelect, counts, totalCount, scrollResetKey }: Props) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    scrollerRef.current?.scrollTo({ left: 0, behavior: 'instant' });
+  }, [scrollResetKey]);
   const tiles: { id: Category | 'all'; label: string; image: string; count: number }[] = [
     {
       id: 'all',
@@ -32,6 +40,7 @@ export function CategoryFilterRow({ active, onSelect, counts, totalCount }: Prop
   return (
     <div className="mt-2.5 px-5 pt-0.5 pb-0.5">
       <div
+        ref={scrollerRef}
         role="tablist"
         aria-label="Filter by category"
         className="-mx-2 flex gap-3 overflow-x-auto px-2 py-2 no-scrollbar"

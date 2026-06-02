@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { isHomeRailOutfit } from '@/data/homeCreatorRails';
 import { format } from 'date-fns';
 import { TopNav } from '@/components/ui/TopNav';
 import { Button, AccentButton } from '@/components/ui/Button';
@@ -11,6 +12,7 @@ import {
   EditIcon,
   ExternalLinkIcon,
   WandIcon,
+  UserIcon,
 } from '@/components/ui/Icon';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -25,8 +27,9 @@ import { formatRupees } from '@/data/myntraSamples';
 import { pickCompleteTheLook } from '@/lib/completeTheLook';
 import { track } from '@/lib/telemetry';
 import { navigateToTryOn, tryOnStateFromOutfit } from '@/lib/tryOnNavigation';
+import { getHomeRailOutfit } from '@/data/homeCreatorRails';
 import { resolveOutfitById, useTryOnPersona, isWireframeDemoOutfit } from '@/lib/tryOnPersona';
-import { getOutfitPieceCount, resolveOutfitWardrobeItems } from '@/lib/outfitPieces';
+import { getOutfitPieceCount, resolveOutfitItemIds, resolveOutfitWardrobeItems } from '@/lib/outfitPieces';
 import { useChrome } from '@/store/chromeStore';
 import { cn } from '@/lib/cn';
 
@@ -54,6 +57,13 @@ export function OutfitDetail() {
   const [askDelete, setAskDelete] = useState(false);
 
   const celebrate = params.get('celebrate') === '1';
+
+  useEffect(() => {
+    if (id && isHomeRailOutfit(id)) {
+      navigate(`/look/${id}`, { replace: true });
+    }
+  }, [id, navigate]);
+
   useEffect(() => {
     if (!celebrate) return;
     const t = setTimeout(() => {
@@ -126,9 +136,17 @@ export function OutfitDetail() {
     toast(`Pinned to ${format(new Date(date + 'T00:00:00'), 'EEE d MMM')}`, 'success');
   };
 
+  const homeRail = getHomeRailOutfit(outfit.id);
   const displayName = outfit.name ?? `Look ${outfit.id.slice(-4)}`;
   const modeLabel =
-    outfit.mode === 'collage' ? 'Collage' : outfit.mode === 'try-on' ? 'AI Try-On' : 'Mix and Match';
+    outfit.mode === 'collage'
+      ? 'Collage'
+      : outfit.mode === 'try-on'
+        ? 'AI Try-On'
+        : outfit.mode === 'dressing-room'
+          ? 'Mix & Match'
+          : 'Outfit';
+  const isCatalogOutfit = isWireframeDemoOutfit(outfit.id) || isHomeRailOutfit(outfit.id);
   const pinnedLabel = pinnedDate ? format(new Date(pinnedDate + 'T00:00:00'), 'EEE d MMM') : null;
 
   const commitRename = () => {
@@ -178,6 +196,7 @@ export function OutfitDetail() {
         <div className="mt-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
             {modeLabel} · {pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'}
+            {homeRail?.creator ? ` · ${homeRail.creator}` : ''}
           </p>
           {editing ? (
             <input
@@ -219,7 +238,7 @@ export function OutfitDetail() {
 
         {/* Pieces in this look */}
         <p className="section-label mt-7 mb-2">Pieces in this look</p>
-        <ul className="-mx-1 flex gap-2 overflow-x-auto no-scrollbar px-1 pb-1">
+        <ul className="touch-scroll-x -mx-1 flex gap-2 px-1 pb-1 no-scrollbar">
           {outfitItems.map((it) => (
             <li key={it.id} className="flex w-20 shrink-0 flex-col items-stretch gap-1">
               <div className="aspect-square overflow-hidden rounded-xl border border-border-subtle bg-bg p-1.5">
@@ -242,7 +261,7 @@ export function OutfitDetail() {
         <p className="text-[12px] text-ink-faint">
           Picks that complement the colours and fill in missing pieces.
         </p>
-        <ul className="mt-3 -mx-1 flex gap-3 overflow-x-auto no-scrollbar px-1">
+        <ul className="touch-scroll-x mt-3 -mx-1 flex gap-3 px-1 no-scrollbar">
           {ctl.map((p) => (
             <li key={p.productId} className="flex w-32 shrink-0 flex-col gap-1.5">
               <div className="aspect-square overflow-hidden rounded-2xl border border-border-subtle bg-bg">
@@ -273,7 +292,7 @@ export function OutfitDetail() {
           className="mt-7 text-primary"
           leadingIcon={<TrashIcon size={16} />}
           onClick={() => setAskDelete(true)}
-          disabled={isWireframeDemoOutfit(outfit.id)}
+          disabled={isCatalogOutfit}
         >
           Delete outfit
         </Button>
@@ -281,15 +300,30 @@ export function OutfitDetail() {
 
       {/* Sticky action footer */}
       <div className="border-t border-divider bg-bg px-page py-3 pb-[calc(0.75rem+var(--safe-bottom))]">
-        <Button
-          fullWidth
-          variant="secondary"
-          className="mb-2"
-          leadingIcon={<WandIcon size={16} />}
-          onClick={() => navigateToTryOn(navigate, tryOnStateFromOutfit(outfit, items))}
-        >
-          AI Try-On
-        </Button>
+        {outfit.mode === 'dressing-room' ? (
+          <AccentButton
+            fullWidth
+            className="mb-2"
+            leadingIcon={<UserIcon size={16} />}
+            onClick={() =>
+              navigate('/studio', {
+                state: { seedIds: resolveOutfitItemIds(outfit, items) },
+              })
+            }
+          >
+            Open in Mix & Match
+          </AccentButton>
+        ) : (
+          <Button
+            fullWidth
+            variant="secondary"
+            className="mb-2"
+            leadingIcon={<WandIcon size={16} />}
+            onClick={() => navigateToTryOn(navigate, tryOnStateFromOutfit(outfit, items))}
+          >
+            Try it on yourself
+          </Button>
+        )}
         <div className={cn('grid gap-2', isV2 ? 'grid-cols-2' : 'grid-cols-3')}>
         {!isV2 && (
           <Button variant="secondary" leadingIcon={<CalendarIcon size={16} />} onClick={() => setPlanOpen(true)}>

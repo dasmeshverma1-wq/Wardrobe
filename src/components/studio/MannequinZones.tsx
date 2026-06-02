@@ -34,8 +34,8 @@ export const FRAME_H = 520;
 
 /** Paint order when slots overlap slightly. */
 export const ZONE_LAYER: Record<ZoneId, number> = {
-  feet: 1,
-  legs: 2,
+  legs: 1,
+  feet: 2,
   outer: 3,
   torso: 4,
   inner: 5,

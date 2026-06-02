@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopNav } from '@/components/ui/TopNav';
 import { Sheet } from '@/components/ui/Sheet';
@@ -30,8 +30,13 @@ const MODES: { id: StudioChoice; title: string; sub: string; icon: typeof UserIc
 export function CreateOutfit() {
   const navigate = useNavigate();
   const setSelection = useWardrobeStore((s) => s.setSelection);
+  const setCategory = useWardrobeStore((s) => s.setCategory);
   const [modeOpen, setModeOpen] = useState(false);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setCategory('all');
+  }, [setCategory]);
 
   function handleContinue(ids: string[]) {
     if (ids.length === 0) {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { executeTryOnGeneration } from '@/lib/tryOnGeneration';
 import { tryOnOutfitName, tryOnOutfitNodesPayload } from '@/lib/tryOnOutfit';
-import type { TryOnGarment, TryOnProgress } from '@/lib/tryOnTypes';
+import type { LookReferenceStyle, TryOnGarment, TryOnProgress } from '@/lib/tryOnTypes';
 import { lsLoad, lsSave, saveImage, loadImage, deleteImage } from '@/lib/storage';
 import { uid } from '@/lib/id';
 import { useOutfitStore } from '@/store/outfitStore';
@@ -35,6 +35,8 @@ type State = {
     wardrobeItems: WardrobeItem[];
     title?: string;
     outfitId?: string;
+    lookImageUrl?: string;
+    lookReferenceStyle?: LookReferenceStyle;
   }) => Promise<{ outfitId: string; resultUrl: string }>;
 };
 
@@ -102,7 +104,15 @@ export const useTryOnStore = create<State>((set, get) => ({
     const name = tryOnOutfitName(input.title);
     const nodes = tryOnOutfitNodesPayload(input.garments, input.wardrobeItems);
 
-    const job = (async () => {
+    let resolve!: (value: { outfitId: string; resultUrl: string }) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<{ outfitId: string; resultUrl: string }>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    generationInFlight = promise;
+
+    void (async () => {
       useOutfitStore.getState().saveOutfit({
         id: outfitId,
         name,
@@ -116,6 +126,7 @@ export const useTryOnStore = create<State>((set, get) => ({
         generatingOutfitId: outfitId,
         genStage: 1,
         genPercent: 0,
+        lastResultDataUrl: null,
         generationProgress: { step: 0, total: 5, label: 'Starting…' },
       });
 
@@ -130,6 +141,13 @@ export const useTryOnStore = create<State>((set, get) => ({
               generationProgress: ui.progress,
             });
           },
+          input.lookImageUrl
+            ? {
+                lookImageUrl: input.lookImageUrl,
+                lookReferenceStyle: input.lookReferenceStyle,
+                lookTitle: input.title,
+              }
+            : undefined,
         );
 
         useOutfitStore.getState().saveOutfit({
@@ -138,16 +156,18 @@ export const useTryOnStore = create<State>((set, get) => ({
           mode: 'try-on',
           nodes,
           thumbnailDataUrl: resultUrl,
-          generationStatus: undefined,
+          generationStatus: null,
         });
 
         set({
           generatingOutfitId: null,
+          genStage: 1,
+          genPercent: 0,
           lastResultDataUrl: resultUrl,
           generationProgress: null,
         });
 
-        return { outfitId, resultUrl };
+        resolve({ outfitId, resultUrl });
       } catch (err) {
         console.error(err);
         useOutfitStore.getState().saveOutfit({
@@ -158,16 +178,18 @@ export const useTryOnStore = create<State>((set, get) => ({
           thumbnailDataUrl: input.avatarUrl,
           generationStatus: 'failed',
         });
-        set({ generatingOutfitId: null, generationProgress: null });
-        throw err;
+        set({
+          generatingOutfitId: null,
+          genStage: 1,
+          genPercent: 0,
+          generationProgress: null,
+        });
+        reject(err);
+      } finally {
+        generationInFlight = null;
       }
     })();
 
-    generationInFlight = job;
-    try {
-      return await job;
-    } finally {
-      generationInFlight = null;
-    }
+    return promise;
   },
 }));

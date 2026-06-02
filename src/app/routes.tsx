@@ -6,6 +6,7 @@ import { CreateOutfit } from '@/pages/CreateOutfit';
 import { AddItem } from '@/pages/AddItem';
 import { Studio, RedirectToStudio } from '@/pages/Studio';
 import { OutfitDetail } from '@/pages/OutfitDetail';
+import { CuratedLookPage } from '@/pages/CuratedLookPage';
 import { PlannerMonth } from '@/pages/PlannerMonth';
 import { PlannerWeek } from '@/pages/PlannerWeek';
 import { TryOnStudio } from '@/pages/TryOnStudio';
@@ -32,6 +33,7 @@ export const router = createBrowserRouter(
           { path: '/studio/dressing-room', element: <RedirectToStudio /> },
           { path: '/studio/try-on', element: <TryOnStudio /> },
           { path: '/try-on', element: <TryOnStudio /> },
+          { path: '/look/:id', element: <CuratedLookPage /> },
           { path: '/outfit/:id', element: <OutfitDetail /> },
           { path: '/discover', element: <Discover /> },
           { path: '/planner', element: <PlannerWeek /> },

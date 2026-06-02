@@ -1,5 +1,5 @@
-import { composeTryOnGemini } from './geminiTryOn';
-import type { TryOnGarment, TryOnProgress } from './tryOnTypes';
+import { composeTryOnFromLookReference, composeTryOnGemini } from './geminiTryOn';
+import type { LookReferenceStyle, TryOnGarment, TryOnProgress } from './tryOnTypes';
 import { rectForZone, sortGarmentsByLayer, zoneForGarment } from './tryOnPlacement';
 
 const OUTPUT_W = 600;
@@ -177,10 +177,17 @@ export async function composeTryOnRemote(
   }
 }
 
+export type GenerateTryOnOptions = {
+  lookImageUrl?: string;
+  lookReferenceStyle?: LookReferenceStyle;
+  lookTitle?: string;
+};
+
 export async function generateTryOn(
   bodyPhotoUrl: string,
   garments: TryOnGarment[],
   onProgress?: (p: TryOnProgress) => void,
+  options?: GenerateTryOnOptions,
 ): Promise<string> {
   // Check if we are trying on the new Summer Linen Set garments
   const hasLinenBlend = garments.some(g => g.name === 'Green Linen Shirt' || g.imageUrl.includes('linen_blend_top'));
@@ -207,11 +214,42 @@ export async function generateTryOn(
     return '/seed-products/female_model_tryon.png';
   }
 
-  const gemini = await composeTryOnGemini(bodyPhotoUrl, garments, onProgress);
-  if (gemini) return gemini;
+  // We race the AI try-on generation against a 15-second timeout.
+  // If the AI takes longer than 15 seconds, we fall back to the local canvas compositor.
+  try {
+    const aiResult = await Promise.race([
+      (async () => {
+        if (options?.lookImageUrl) {
+          const fromLook = await composeTryOnFromLookReference(
+            bodyPhotoUrl,
+            options.lookImageUrl,
+            options.lookReferenceStyle ?? 'model',
+            onProgress,
+            options.lookTitle,
+          );
+          if (fromLook) return fromLook;
+        }
 
-  const remote = await composeTryOnRemote(bodyPhotoUrl, garments, onProgress);
-  if (remote) return remote;
+        const gemini = await composeTryOnGemini(bodyPhotoUrl, garments, onProgress);
+        if (gemini) return gemini;
+
+        const remote = await composeTryOnRemote(bodyPhotoUrl, garments, onProgress);
+        if (remote) return remote;
+
+        return null;
+      })(),
+      new Promise<null>((resolve) =>
+        setTimeout(() => {
+          console.warn('[try-on] AI generation timed out after 15s, falling back to local compositor');
+          resolve(null);
+        }, 15000)
+      ),
+    ]);
+
+    if (aiResult) return aiResult;
+  } catch (err) {
+    console.warn('[try-on] AI generation failed, falling back to local compositor', err);
+  }
 
   return composeTryOn(bodyPhotoUrl, garments, onProgress);
 }

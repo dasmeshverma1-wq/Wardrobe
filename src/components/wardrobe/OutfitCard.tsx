@@ -8,12 +8,28 @@ export function OutfitCard({
   onClick,
   plannedDate,
   className,
+  imageAspect = 'portrait',
+  size = 'default',
+  imageFit,
+  imageFocus = 'center',
 }: {
   outfit: Outfit;
   onClick?: () => void;
   plannedDate?: string;
   className?: string;
+  /** Portrait for saved try-ons; square for home creator / AI rails. */
+  imageAspect?: 'portrait' | 'square';
+  /** Smaller tile for horizontal home rails. */
+  size?: 'default' | 'compact';
+  /** Cover the frame (fill) or show full flat-lay (contain). */
+  imageFit?: 'fill' | 'contain';
+  /** Vertical anchor when using fill — center keeps model shots aligned in square tiles. */
+  imageFocus?: 'center' | 'top';
 }) {
+  const compact = size === 'compact';
+  const fit =
+    imageFit ??
+    (imageAspect === 'square' && outfit.mode === 'dressing-room' ? 'contain' : 'fill');
   const modeLabel =
     outfit.mode === 'collage'
       ? 'Collage'
@@ -30,30 +46,59 @@ export function OutfitCard({
       onClick={onClick}
       aria-label={`${name}, ${pieceCount} items, ${modeLabel}${planned}. Tap to open.`}
       className={cn(
-        'group flex w-full flex-col overflow-hidden rounded-2xl border border-border-subtle bg-bg',
+        'group flex w-full flex-col overflow-hidden border border-border-subtle bg-bg',
+        compact ? 'rounded-xl' : 'rounded-2xl',
         'transition-transform active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         className,
       )}
     >
-      <div className="relative aspect-[9/16] w-full shrink-0 overflow-hidden bg-bg-soft">
+      <div
+        className={cn(
+          'relative w-full shrink-0 overflow-hidden bg-bg-soft',
+          imageAspect === 'square' ? 'aspect-square' : 'aspect-[9/16]',
+        )}
+      >
         <img
           src={outfit.thumbnailDataUrl}
           alt={outfit.name ?? 'Outfit'}
           className={cn(
-            'absolute inset-0 h-full w-full object-cover object-center',
+            'absolute inset-0 h-full w-full',
+            fit === 'contain'
+              ? cn('object-contain', compact ? 'p-1' : 'p-1.5')
+              : cn(
+                  'object-cover',
+                  imageFocus === 'top' ? 'object-top' : 'object-center',
+                ),
             outfit.generationStatus === 'generating' && 'opacity-40 blur-[1px]',
           )}
           draggable={false}
         />
         {outfit.generationStatus === 'generating' && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/75 px-3 text-center">
+          <div
+            className={cn(
+              'absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/75 text-center',
+              compact ? 'px-1.5' : 'px-3',
+            )}
+          >
             <div
-              className="h-7 w-7 animate-spin rounded-full border-2 border-[#ff3f6c] border-t-transparent"
+              className={cn(
+                'animate-spin rounded-full border-2 border-[#ff3f6c] border-t-transparent',
+                compact ? 'h-5 w-5' : 'h-7 w-7',
+              )}
               aria-hidden
             />
-            <p className="mt-2 text-[11px] font-bold leading-snug text-[#262a39]">Generating try-on…</p>
-            <p className="mt-0.5 text-[10px] text-[#8d8e96]">This may take a minute</p>
+            <p
+              className={cn(
+                'font-bold leading-snug text-[#262a39]',
+                compact ? 'mt-1 text-[9px]' : 'mt-2 text-[11px]',
+              )}
+            >
+              Generating try-on…
+            </p>
+            {!compact && (
+              <p className="mt-0.5 text-[10px] text-[#8d8e96]">This may take a minute</p>
+            )}
           </div>
         )}
         {outfit.generationStatus === 'failed' && (
@@ -68,11 +113,26 @@ export function OutfitCard({
           </span>
         )}
       </div>
-      <div className="flex h-[3.25rem] shrink-0 flex-col justify-center px-2.5 text-left">
-        <div className="truncate text-[13px] font-bold leading-tight tracking-tightish text-ink-strong">
+      <div
+        className={cn(
+          'flex shrink-0 flex-col justify-center text-left',
+          compact ? 'h-[2.625rem] px-2' : 'h-[3.25rem] px-2.5',
+        )}
+      >
+        <div
+          className={cn(
+            'truncate font-bold leading-tight tracking-tightish text-ink-strong',
+            compact ? 'text-[12px]' : 'text-[13px]',
+          )}
+        >
           {name}
         </div>
-        <div className="truncate text-[11px] leading-tight text-ink-subtle">
+        <div
+          className={cn(
+            'truncate leading-tight text-ink-subtle',
+            compact ? 'text-[10px]' : 'text-[11px]',
+          )}
+        >
           {pieceCount > 0 ? `${pieceCount} items · ${modeLabel}` : modeLabel}
         </div>
       </div>

@@ -17,6 +17,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   accessories: 'Accessories',
 };
 
+/** Closet chips & grids: head-to-toe — tops first, accessories last. */
 export const CATEGORY_ORDER: Category[] = [
   'tops',
   'bottoms',
@@ -27,7 +28,7 @@ export const CATEGORY_ORDER: Category[] = [
   'accessories',
 ];
 
-export type ItemSource = 'camera' | 'gallery' | 'url' | 'myntra' | 'seed';
+export type ItemSource = 'camera' | 'gallery' | 'url' | 'myntra' | 'seed' | 'myntra-past' | 'myntra-wishlist' | 'myntra-cart';
 
 export type MaterialTag = 'suede' | 'canvas' | 'leather' | 'cotton' | 'denim' | 'silk' | 'wool' | 'other';
 

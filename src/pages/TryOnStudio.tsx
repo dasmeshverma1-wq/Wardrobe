@@ -11,7 +11,6 @@ import {
   WandIcon,
   CloseIcon,
 } from '@/components/ui/Icon';
-import { ItemCard } from '@/components/wardrobe/ItemCard';
 import { useTryOnStore } from '@/store/tryOnStore';
 import { useWardrobeStore } from '@/store/wardrobeStore';
 import { useOutfitStore } from '@/store/outfitStore';
@@ -22,7 +21,6 @@ import {
   tryOnBodyCapturePhoto,
   tryOnSelfieCapturePhoto,
 } from '@/data/tryOnOnboardingPhotos';
-import { sortWardrobeByRecent } from '@/lib/wardrobeRecent';
 import { resolveTryOnGarments } from '@/lib/tryOnResolveGarments';
 import type { TryOnGarment, TryOnLocationState } from '@/lib/tryOnTypes';
 import { shareOrDownload } from '@/lib/share';
@@ -36,6 +34,8 @@ import {
   TryOnAvatarOnboardingSheet,
   type AvatarOnboardingStep,
 } from '@/components/tryOn/TryOnAvatarOnboardingSheet';
+import { TryOnClosetSheet } from '@/components/tryOn/TryOnClosetSheet';
+import { CATEGORY_LABELS } from '@/types';
 
 type Phase = 'pick' | 'generating' | 'result';
 
@@ -58,13 +58,13 @@ export function TryOnStudio() {
   const { effectiveBodyPreview, usesLiveCamera } = useTryOnPersona();
 
   const items = useWardrobeStore((s) => s.items);
-  const recentClosetItems = useMemo(() => sortWardrobeByRecent(items), [items]);
   const outfits = useOutfitStore((s) => s.outfits);
 
   const [phase, setPhase] = useState<Phase>('pick');
   const [avatarStep, setAvatarStep] = useState<AvatarOnboardingStep>('selfies-intro');
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [garments, setGarments] = useState<TryOnGarment[]>([]);
+  const selectedGarmentIds = useMemo(() => new Set(garments.map((g) => g.id)), [garments]);
   const [title, setTitle] = useState<string | undefined>();
   
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -80,14 +80,32 @@ export function TryOnStudio() {
   const [captureUploadPreview, setCaptureUploadPreview] = useState<string | null>(null);
 
   const [resultOutfitId, setResultOutfitId] = useState<string | null>(null);
+  const lastResultDataUrl = useTryOnStore((s) => s.lastResultDataUrl);
+  const resumedGenerating = useRef(false);
 
   useEffect(() => {
     void hydrateTryOn();
   }, [hydrateTryOn]);
 
+  /** Resume in-progress UI only when opening the studio mid-job (not after every store tick). */
   useEffect(() => {
-    if (generatingOutfitId) setPhase('generating');
+    if (generatingOutfitId && !resumedGenerating.current) {
+      resumedGenerating.current = true;
+      setPhase('generating');
+    }
+    if (!generatingOutfitId) resumedGenerating.current = false;
   }, [generatingOutfitId]);
+
+  /** If the job finished but local phase was not updated, show the result screen. */
+  useEffect(() => {
+    if (generatingOutfitId || phase !== 'generating') return;
+    if (lastResultDataUrl) {
+      setResultUrl(lastResultDataUrl);
+      setPhase('result');
+    } else {
+      setPhase('pick');
+    }
+  }, [generatingOutfitId, phase, lastResultDataUrl]);
 
   useEffect(() => {
     (async () => {
@@ -119,7 +137,11 @@ export function TryOnStudio() {
     }
   }, [effectiveBodyPreview]);
 
-  const canGenerate = garments.length > 0 && !!effectiveBodyPreview;
+  const lookImageUrl = navState?.lookImageUrl;
+  const lookReferenceStyle = navState?.lookReferenceStyle;
+  const isLookReferenceTryOn = !!lookImageUrl;
+  const canGenerate =
+    !!effectiveBodyPreview && (isLookReferenceTryOn || garments.length > 0);
 
   const closeAvatarSheet = () => {
     setAvatarSheetOpen(false);
@@ -217,7 +239,7 @@ export function TryOnStudio() {
 
     toast('Avatar saved successfully!', 'success');
     
-    if (garments.length > 0) {
+    if (garments.length > 0 || lookImageUrl) {
       void runGenerateDirectly(finalPhoto);
     } else {
       setPhase('pick');
@@ -245,6 +267,9 @@ export function TryOnStudio() {
         garments,
         wardrobeItems: items,
         title,
+        outfitId: navState?.outfitId,
+        lookImageUrl,
+        lookReferenceStyle,
       });
       setResultOutfitId(outfitId);
       completeGeneration(resultUrl);
@@ -258,7 +283,8 @@ export function TryOnStudio() {
   };
 
   const runGenerate = async () => {
-    if (!effectiveBodyPreview || garments.length === 0) return;
+    if (!effectiveBodyPreview) return;
+    if (!isLookReferenceTryOn && garments.length === 0) return;
     await startGeneration(effectiveBodyPreview);
   };
 
@@ -380,12 +406,13 @@ export function TryOnStudio() {
 
       <div
         className={cn(
-          'scroll-area flex min-h-0 flex-1 flex-col justify-start px-5 pb-[calc(1rem+var(--safe-bottom))]',
+          'flex min-h-0 flex-1 flex-col overflow-hidden',
           phase === 'result' && 'hidden',
         )}
       >
         {phase === 'pick' && (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col px-5 pb-[calc(1rem+var(--safe-bottom))]">
+            <div className="scroll-area min-h-0 flex-1 overscroll-contain">
             <div className="rounded-[24px] border border-border-subtle bg-white p-4 animate-fade-in shadow-sm">
               <div className="flex items-start gap-3.5">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-[#f0eefc] text-[#8270db]">
@@ -424,66 +451,101 @@ export function TryOnStudio() {
               </div>
             )}
 
+            {isLookReferenceTryOn && lookImageUrl && (
+              <div className="mt-4 overflow-hidden rounded-[24px] border border-border-subtle bg-white shadow-sm">
+                <p className="px-4 pt-4 text-[12.5px] font-extrabold uppercase tracking-wider text-[#8d8e96]">
+                  Reference look {title ? `· ${title}` : ''}
+                </p>
+                <p className="px-4 pb-2 text-[12px] leading-snug text-[#686b77]">
+                  We&apos;ll style this outfit on your photo — not on the model in the image.
+                </p>
+                <div className="mx-4 mb-4 overflow-hidden rounded-2xl bg-bg-soft">
+                  <img
+                    src={lookImageUrl}
+                    alt=""
+                    className={cn(
+                      'w-full object-cover object-center',
+                      lookReferenceStyle === 'flat-lay' ? 'aspect-[4/5]' : 'aspect-[9/16]',
+                    )}
+                    draggable={false}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 flex items-center justify-between gap-2">
               <h2 className="text-[12.5px] font-extrabold uppercase tracking-wider text-[#8d8e96] font-sans">
-                Items to try {title ? `· ${title}` : ''}
+                {isLookReferenceTryOn ? 'Pieces in this look' : 'Items to try'}
+                {title ? ` · ${title}` : ''}
               </h2>
-              <button
-                type="button"
-                onClick={() => setClosetOpen(true)}
-                className="inline-flex items-center gap-1 text-[13px] font-bold text-[#ff3f6c] active:opacity-80 transition-opacity"
-              >
-                <span className="text-[16px] leading-[1] font-normal">+</span>
-                <span>Add Items</span>
-              </button>
+              {!isLookReferenceTryOn && (
+                <button
+                  type="button"
+                  onClick={() => setClosetOpen(true)}
+                  className="inline-flex items-center gap-1 text-[13px] font-bold text-[#ff3f6c] active:opacity-80 transition-opacity"
+                >
+                  <span className="text-[16px] leading-[1] font-normal">+</span>
+                  <span>Add Items</span>
+                </button>
+              )}
             </div>
 
-            {garments.length === 0 ? (
-              <div className="mt-3 rounded-[24px] border border-dashed border-border-subtle px-4 py-8 text-center flex-1 flex flex-col justify-center bg-white shadow-sm">
+            {garments.length === 0 && !isLookReferenceTryOn ? (
+              <div className="mt-3 rounded-[24px] border border-dashed border-border-subtle px-4 py-8 text-center bg-white shadow-sm">
                 <p className="text-[14px] font-bold text-[#262a39]">No items selected</p>
-                <p className="mt-1 text-[12.5px] text-[#686b77]">Select items to display in preview</p>
+                <p className="mt-1 text-[12.5px] text-[#686b77]">Add tops, bottoms, shoes, and more from your closet</p>
                 <Button className="mt-4 mx-auto" variant="secondary" onClick={() => setClosetOpen(true)}>
                   Browse closet
                 </Button>
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-3 gap-3 py-2 mb-6">
-                {garments.map((g) => (
-                  <div key={g.id} className="relative animate-scale-in">
-                    <button
-                      type="button"
-                      onClick={() => removeGarment(g.id)}
-                      aria-label={`Remove ${g.name}`}
-                      className="absolute -right-1.5 -top-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-[#1b2234] text-white shadow-md active:scale-90 transition-transform cursor-pointer hover:bg-[#ff3f6c]"
-                    >
-                      <CloseIcon size={9} />
-                    </button>
-                    <div className="overflow-hidden rounded-[16px] border border-border-subtle bg-white p-2.5 flex flex-col items-center shadow-sm">
-                      <div className="aspect-square w-full flex items-center justify-center overflow-hidden rounded-lg bg-white">
-                        <img src={g.imageUrl} alt="" className="max-h-full max-w-full object-contain" />
+              <div className="touch-scroll-x -mx-5 mt-4 px-5 pb-2 no-scrollbar">
+                <div className="flex w-max gap-3 py-1">
+                  {garments.map((g) => (
+                    <div key={g.id} className="relative w-[5.5rem] shrink-0 animate-scale-in">
+                      {!isLookReferenceTryOn && (
+                      <button
+                        type="button"
+                        onClick={() => removeGarment(g.id)}
+                        aria-label={`Remove ${g.name}`}
+                        className="absolute -right-1 -top-1 z-10 grid h-6 w-6 place-items-center rounded-full bg-[#1b2234] text-white shadow-md active:scale-90"
+                      >
+                        <CloseIcon size={9} />
+                      </button>
+                      )}
+                      <div className="overflow-hidden rounded-[16px] border border-border-subtle bg-white p-2 shadow-sm">
+                        <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-white">
+                          <img src={g.imageUrl} alt="" className="max-h-full max-w-full object-contain" draggable={false} />
+                        </div>
+                        <p className="mt-1.5 truncate text-center text-[10px] font-bold text-[#262a39]">
+                          {g.name}
+                        </p>
+                        <p className="truncate text-center text-[9px] font-semibold uppercase tracking-wide text-[#8d8e96]">
+                          {CATEGORY_LABELS[g.category]}
+                        </p>
                       </div>
-                      <p className="mt-2 truncate w-full text-center text-[10px] font-bold text-[#262a39] px-0.5">{g.name}</p>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
+            </div>
 
             <button
               type="button"
               disabled={!canGenerate}
               onClick={() => void runGenerate()}
               className={cn(
-                "mt-auto w-full flex gap-2 h-12 items-center justify-center rounded-[12px] font-bold text-[16px] text-white transition-all active:scale-[0.99]",
+                'mt-3 shrink-0 flex h-12 w-full items-center justify-center gap-2 rounded-[12px] text-[16px] font-bold text-white transition-all active:scale-[0.99]',
                 canGenerate
-                  ? "bg-[#ff3f6c] cursor-pointer hover:bg-[#e6355e] shadow-[0_4px_14px_rgba(255,63,108,0.25)]"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  ? 'cursor-pointer bg-[#ff3f6c] shadow-[0_4px_14px_rgba(255,63,108,0.25)] hover:bg-[#e6355e]'
+                  : 'cursor-not-allowed bg-gray-200 text-gray-400',
               )}
             >
               <WandIcon size={18} />
               <span>Generate try-on</span>
             </button>
-          </>
+          </div>
         )}
 
         {phase === 'generating' && (
@@ -560,28 +622,16 @@ export function TryOnStudio() {
         }}
       />
 
-      <Sheet open={closetOpen} onClose={() => setClosetOpen(false)} title="Add from closet">
-        <div className="grid grid-cols-3 gap-2 pb-4">
-          {recentClosetItems.map((it) => {
-            const isSelected = garments.some((g) => g.id === it.id);
-            return (
-              <ItemCard
-                key={it.id}
-                item={it}
-                selectable
-                selected={isSelected}
-                onClick={() => {
-                  if (isSelected) {
-                    removeGarment(it.id);
-                  } else {
-                    void addGarment(it);
-                  }
-                }}
-              />
-            );
-          })}
-        </div>
-      </Sheet>
+      <TryOnClosetSheet
+        open={closetOpen}
+        onClose={() => setClosetOpen(false)}
+        items={items}
+        selectedIds={selectedGarmentIds}
+        onToggle={(it) => {
+          if (selectedGarmentIds.has(it.id)) removeGarment(it.id);
+          else void addGarment(it);
+        }}
+      />
     </div>
   );
 }

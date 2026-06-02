@@ -48,8 +48,9 @@ export function StudioClosetSheet({
   }, [zoneItems]);
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} maxHeight="58vh">
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto no-scrollbar pb-3">
+    <Sheet open={open} onClose={onClose} title={title} maxHeight="58vh" showCloseButton>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="-mx-1 flex shrink-0 gap-1.5 overflow-x-auto no-scrollbar pb-3">
         <Chip active={category === 'all'} onClick={() => setCategory('all')}>
           All ({zoneItems.length})
         </Chip>
@@ -62,6 +63,7 @@ export function StudioClosetSheet({
         )}
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-[13px] text-ink-faint">Nothing in this category yet.</p>
       ) : (
@@ -105,6 +107,8 @@ export function StudioClosetSheet({
           })}
         </ul>
       )}
+      </div>
+      </div>
     </Sheet>
   );
 }

@@ -1,3 +1,4 @@
+import { getHomeRailPieceSpecs, isHomeRailOutfit } from '@/data/homeCreatorRails';
 import {
   getWireframeDemoPieceCount,
   getWireframeDemoPieceSpecs,
@@ -43,6 +44,12 @@ export function resolveOutfitWardrobeItems(
       .filter((x): x is WardrobeItem => Boolean(x));
   }
 
+  if (isHomeRailOutfit(outfit.id)) {
+    return getHomeRailPieceSpecs(outfit.id).map(
+      (spec) => matchWardrobeItem(wardrobeItems, spec) ?? syntheticPiece(spec),
+    );
+  }
+
   if (!isWireframeDemoOutfit(outfit.id)) return [];
 
   return getWireframeDemoPieceSpecs(outfit.id).map(
@@ -52,6 +59,7 @@ export function resolveOutfitWardrobeItems(
 
 export function getOutfitPieceCount(outfit: Outfit): number {
   if (outfit.nodes.length > 0) return outfit.nodes.length;
+  if (isHomeRailOutfit(outfit.id)) return getHomeRailPieceSpecs(outfit.id).length;
   if (isWireframeDemoOutfit(outfit.id)) return getWireframeDemoPieceCount(outfit.id);
   return 0;
 }
@@ -60,7 +68,7 @@ export function getOutfitPieceCount(outfit: Outfit): number {
 export function resolveOutfitNodes(outfit: Outfit, wardrobeItems: WardrobeItem[]): CanvasNode[] {
   if (outfit.nodes.length > 0) return outfit.nodes;
 
-  if (!isWireframeDemoOutfit(outfit.id)) return [];
+  if (!isWireframeDemoOutfit(outfit.id) && !isHomeRailOutfit(outfit.id)) return [];
 
   return resolveOutfitWardrobeItems(outfit, wardrobeItems).map((item, index) => ({
     itemId: item.id,

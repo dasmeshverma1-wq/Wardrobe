@@ -7,7 +7,6 @@ import { Sheet } from '@/components/ui/Sheet';
 import {
   CameraIcon,
   ImageIcon,
-  LinkIcon,
   BagIcon,
   HeartIcon,
   CheckIcon,
@@ -23,43 +22,22 @@ import { fileToDataUrl, downscale, makeThumbnail, dominantColor, loadImage } fro
 import { removeBackground, type BgProgress } from '@/lib/bgRemoval';
 import { guessCategory, guessMaterial } from '@/lib/categorize';
 import { useWardrobeStore } from '@/store/wardrobeStore';
-import { CATEGORY_LABELS, CATEGORY_ORDER, type Category } from '@/types';
+import { CATEGORY_LABELS, CATEGORY_ORDER, type Category, type ItemSource } from '@/types';
 import { MYNTRA_SAMPLES, formatRupees } from '@/data/myntraSamples';
 import { toast } from '@/components/ui/Toast';
 import { track } from '@/lib/telemetry';
 
-type SourceId = 'camera' | 'gallery' | 'url' | 'past' | 'cart' | 'wishlist';
+type SourceId = 'past' | 'cart' | 'wishlist';
 
 type SourceTile = {
   id: SourceId;
   title: string;
   subtitle: string;
-  icon: typeof CameraIcon;
+  icon: typeof BagIcon;
   tone: 'primary' | 'ai' | 'neutral' | 'gold';
 };
 
 const SOURCE_TILES: SourceTile[] = [
-  {
-    id: 'camera',
-    title: 'Camera',
-    subtitle: 'Snap on a clean surface',
-    icon: CameraIcon,
-    tone: 'primary',
-  },
-  {
-    id: 'gallery',
-    title: 'Gallery',
-    subtitle: 'Pick from your photos',
-    icon: ImageIcon,
-    tone: 'ai',
-  },
-  {
-    id: 'url',
-    title: 'Link',
-    subtitle: 'Paste a product image URL',
-    icon: LinkIcon,
-    tone: 'neutral',
-  },
   {
     id: 'past',
     title: 'Past orders',
@@ -91,7 +69,7 @@ type Draft = {
   name?: string;
   brand?: string;
   dominantColor?: string;
-  source: 'camera' | 'gallery' | 'url' | 'myntra';
+  source: ItemSource;
   myntraProductId?: string;
   material?: ReturnType<typeof guessMaterial>;
 };
@@ -191,13 +169,10 @@ export function AddItem() {
         <SourcePicker onPick={(id) => setSource(id)} />
       ) : (
         <div className="scroll-area">
-          {source === 'camera' && <CameraTab onPicked={(src, name) => startFromImage(src, 'camera', { name })} />}
-          {source === 'gallery' && <GalleryTab onPicked={(src, name) => startFromImage(src, 'gallery', { name })} />}
-          {source === 'url' && <UrlTab onPicked={(src, url) => startFromImage(src, 'url', { url, name: deriveNameFromUrl(url) })} />}
           {source === 'past' && (
             <PastPurchasesTab
               onPicked={(s) =>
-                startFromImage(s.image, 'myntra', {
+                startFromImage(s.image, 'myntra-past', {
                   name: s.name,
                   myntraProductId: s.productId,
                 })

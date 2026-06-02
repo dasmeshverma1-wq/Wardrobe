@@ -1,4 +1,4 @@
-import { generateTryOn } from '@/lib/tryOnCompositor';
+import { generateTryOn, type GenerateTryOnOptions } from '@/lib/tryOnCompositor';
 import type { TryOnGarment, TryOnProgress } from '@/lib/tryOnTypes';
 
 export type TryOnGenerationUi = {
@@ -27,6 +27,7 @@ export async function executeTryOnGeneration(
   avatarUrl: string,
   garments: TryOnGarment[],
   onUiUpdate: (ui: TryOnGenerationUi) => void,
+  options?: GenerateTryOnOptions,
 ): Promise<string> {
   const started = Date.now();
   let stage = 1;
@@ -75,7 +76,7 @@ export async function executeTryOnGeneration(
       if (p.step >= 2) stage = Math.max(stage, 3);
       if (p.step >= 3) stage = Math.max(stage, 3);
       onUiUpdate({ stage, percent, progress: p });
-    });
+    }, options);
 
     const wait = Math.max(0, MIN_GENERATING_MS - (Date.now() - started));
     if (wait > 0) await delay(wait);
