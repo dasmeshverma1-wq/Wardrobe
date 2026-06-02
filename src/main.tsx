@@ -1,3 +1,4 @@
+import './lib/pathResolver'; // Must be imported first to intercept image and fetch paths globally
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
